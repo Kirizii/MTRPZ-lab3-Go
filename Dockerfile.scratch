@@ -1,12 +1,19 @@
 FROM golang:1.22 AS builder
 
 WORKDIR /app
+
+COPY go.mod go.sum ./
+RUN go mod download
+
 COPY . .
-RUN go build -o app .
+
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o fizzbuzz
 
 FROM scratch
+WORKDIR /app
+COPY --from=builder /app/fizzbuzz .
+COPY --from=builder /app/templates /app/templates
 
-COPY --from=builder /app/app /app
-COPY --from=builder /app/templates/index.html /templates/index.html
-WORKDIR /
-CMD ["/app"]
+EXPOSE 8080
+ENTRYPOINT ["/app/fizzbuzz", "serve", "--port", "8080"]
+
